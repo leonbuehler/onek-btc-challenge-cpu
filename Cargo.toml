@@ -1,0 +1,12 @@
+[package]
+name = "onek-btc-challenge-cpu"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitcoin = "0.32.6"
+bnum = { version = "0.13.0", features = ["nightly", "rand"] }
+hex = "0.4.3"
+log = "0.4.27"
+rand = "0.8"
+simple_logger = "5.0.0"
