@@ -1,4 +1,6 @@
-use bitcoin::{Address, Network, PrivateKey, key::Secp256k1};
+use std::hash::Hash;
+
+use bitcoin::{Address, Network, PrivateKey, PublicKey, base58, hashes::hash160, key::Secp256k1};
 use bnum::BUint;
 use rand::Rng;
 
@@ -23,13 +25,13 @@ fn main() {
     loop {
         let privkey = PrivateKey::from_slice(&search_key.to_be_bytes(), Network::Bitcoin).unwrap();
         let pubkey = privkey.public_key(&secp);
-        let address = Address::p2pkh(pubkey, Network::Bitcoin);
+        let address = format_pubkey(&pubkey);
 
         log::info!("trying: {search_key:?}");
         log::info!("addr: {address}");
         search_key += BUint::ONE;
 
-        if address.to_string() == TARGET {
+        if address == TARGET {
             log::error!("FOUND");
             log::error!("Seed HEX: {:x}", search_key);
             log::error!("Seed num: {}", search_key);
@@ -39,6 +41,14 @@ fn main() {
             return;
         }
     }
+}
+
+fn format_pubkey(pubkey: &PublicKey) -> String {
+    let hash = pubkey.pubkey_hash();
+    let mut prefixed = [0; 21];
+    prefixed[0] = 0;
+    prefixed[1..].copy_from_slice(&hash[..]);
+    return base58::encode_check(&prefixed[..]);
 }
 
 fn generate_random_start() -> BUint<4> {
