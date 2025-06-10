@@ -1,0 +1,11 @@
+This is a solver for the 1000bitcoin challenge
+https://privatekeys.pw/puzzles/bitcoin-puzzle-tx
+
+It can be configured for a specific puzzle with the constants in src/main.rs
+It will start at a random point within the search space and try out addresses one after another.
+It runs only on the cpu and using only one thread.
+For multithreading, just start the program multiple times lol.
+
+Since this solver only runs on the cpu its probably too slow for any practical purpose, so you should not use it.
+
+Code is under GPLv3
