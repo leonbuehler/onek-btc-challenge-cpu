@@ -1,6 +1,4 @@
-use std::hash::Hash;
-
-use bitcoin::{Address, Network, PrivateKey, PublicKey, base58, hashes::hash160, key::Secp256k1};
+use bitcoin::{Network, PrivateKey, PublicKey, base58, key::Secp256k1};
 use bnum::BUint;
 use rand::Rng;
 
