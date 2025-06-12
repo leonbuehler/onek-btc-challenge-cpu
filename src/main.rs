@@ -10,13 +10,17 @@ use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
 // pub const CHALLENGE: u32 = 71;
 // pub const TARGET: &str = "1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU";
+// pub const TARGET_PKH: &str = "f6f5431d25bbf7b12e8add9af5e3475c44a0a5b8";
 
 pub const CHALLENGE: u32 = 24;
 pub const TARGET: &str = "1rSnXMr63jdCuegJFuidJqWxUPV7AtUf7";
+pub const TARGET_PKH: &str = "0959e80121f36aea13b3bad361c15dac26189e2f";
 
 fn main() {
     simple_logger::init().unwrap();
     let logger = Logger::new();
+
+    let target = &hex::decode(TARGET_PKH).unwrap()[..];
 
     // generate a random key to start searching at
     let mut search_key: BUint<4> = generate_random_start_checked();
@@ -25,14 +29,14 @@ fn main() {
     let secp = Secp256k1::new();
     loop {
         logger.increase();
-        let privkey = SecretKey::from_slice(&search_key.to_be_bytes()).unwrap();
-        let pubkey = PublicKey::from_secret_key(&secp, &privkey);
-        let address = pubkey_to_pkh_address(&pubkey);
-
         search_key += BUint::ONE;
 
-        if address == TARGET {
-            log::error!("FOUND");
+        let privkey = SecretKey::from_slice(&search_key.to_be_bytes()).unwrap();
+        let pubkey = PublicKey::from_secret_key(&secp, &privkey);
+        let pubkey_hash = hash(&pubkey.serialize()).to_byte_array();
+
+        if pubkey_hash == target {
+            log::error!("FOUND OTHER");
             log::error!("Seed HEX: {:x}", search_key);
             log::error!("WIF key: {}", fmt_wif(&privkey));
             return;
@@ -54,12 +58,4 @@ pub fn fmt_wif(key: &SecretKey) -> String {
     ret[33] = 1;
     let privkey = base58ck::encode_check(&ret[..]);
     return privkey;
-}
-
-fn pubkey_to_pkh_address(pubkey: &PublicKey) -> String {
-    let hash = hash(&pubkey.serialize());
-    let mut prefixed = [0; 21];
-    prefixed[0] = 0;
-    prefixed[1..].copy_from_slice(hash.as_byte_array());
-    return base58ck::encode_check(&prefixed[..]);
 }
