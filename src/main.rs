@@ -11,8 +11,11 @@ use bitcoin::{
 };
 use bnum::BUint;
 
-pub const CHALLENGE: u32 = 71;
-pub const TARGET: &str = "1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU";
+// pub const CHALLENGE: u32 = 71;
+// pub const TARGET: &str = "1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU";
+
+pub const CHALLENGE: u32 = 21;
+pub const TARGET: &str = "14oFNXucftsHiUMY8uctg6N487riuyXs4h";
 
 fn main() {
     simple_logger::init().unwrap();
@@ -50,9 +53,7 @@ fn hash(data: &[u8]) -> hash160::Hash {
 
 fn format_pubkey(pubkey: &PublicKey) -> String {
     let serialized = pubkey.inner.serialize();
-    let hash1 = hash(&serialized);
-    let hash = pubkey.pubkey_hash();
-    assert_eq!(hash1, hash.into());
+    let hash = hash(&serialized);
     let mut prefixed = [0; 21];
     prefixed[0] = 0;
     prefixed[1..].copy_from_slice(&hash[..]);
