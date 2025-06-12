@@ -12,3 +12,8 @@ log = "0.4.27"
 rand = "0.8"
 secp256k1 = "0.31.0"
 simple_logger = "5.0.0"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+strip = "symbols"
