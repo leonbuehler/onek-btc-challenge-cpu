@@ -6,7 +6,7 @@ mod random_bnum;
 use random_bnum::generate_random_start_checked;
 
 use bnum::BUint;
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use secp256k1::{PublicKey, SECP256K1, SecretKey};
 
 // pub const CHALLENGE: u32 = 71;
 // pub const TARGET: &str = "1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU";
@@ -20,19 +20,19 @@ fn main() {
     simple_logger::init().unwrap();
     let logger = Logger::new();
 
+    // the hash we are trying to find
     let target = &hex::decode(TARGET_PKH).unwrap()[..];
 
     // generate a random key to start searching at
     let mut search_key: BUint<4> = generate_random_start_checked();
     log::info!("starting at {search_key:x}",);
 
-    let secp = Secp256k1::new();
     loop {
         logger.increase();
         search_key += BUint::ONE;
 
         let privkey = SecretKey::from_slice(&search_key.to_be_bytes()).unwrap();
-        let pubkey = PublicKey::from_secret_key(&secp, &privkey);
+        let pubkey = PublicKey::from_secret_key(&SECP256K1, &privkey);
         let pubkey_hash = hash(&pubkey.serialize()).to_byte_array();
 
         if pubkey_hash == target {
