@@ -16,3 +16,6 @@ simple_logger = "5.0.0"
 [profile.release]
 codegen-units = 1
 lto = "fat"
+
+# for flamegraphing
+debug = true

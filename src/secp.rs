@@ -1,6 +1,13 @@
+// initially i wanted to write my own eliptic curve code to turn a privkey
+// inti a pubkey, and i did. This is in fact, a working, self written
+// implementation of privkey_to_pubkey
+// i planned to optimize it to be fast, but never got around to do it
+// so this is pretty slow as of now
 use bnum::{BInt, BUint, cast::As};
 
-const P: BInt<16> = BInt::parse_str_radix(
+const INT_SIZE: usize = 14;
+
+const P: BInt<INT_SIZE> = BInt::parse_str_radix(
     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
     16,
 );
@@ -18,43 +25,64 @@ const G: Point = Point {
 
 #[derive(PartialEq, Debug)]
 pub struct Point {
-    x: BInt<16>,
-    y: BInt<16>,
+    x: BInt<INT_SIZE>,
+    y: BInt<INT_SIZE>,
 }
 
 // solution from https://rustp.org/number-theory/modular-inverse/
-fn get_modinv(mut a: BInt<16>) -> BInt<16> {
+// fn get_modinv(mut a: BInt<INT_SIZE>) -> BInt<INT_SIZE> {
+//     if a < BInt::ZERO {
+//         a = ((a % P) + P) % P;
+//     }
+//     let mut x = P - BInt::TWO;
+//     let mut ans = BInt::ONE;
+//     if x <= BInt::ZERO {
+//         return BInt::ONE;
+//     }
+//     loop {
+//         if x == BInt::ONE {
+//             return (ans * a) % P;
+//         }
+//         if x & BInt::ONE == BInt::ZERO {
+//             a = (a * a) % P;
+//             x >>= 1;
+//             continue;
+//         } else {
+//             ans = (ans * a) % P;
+//             x -= BInt::ONE;
+//         }
+//     }
+// }
+fn get_modinv(mut a: BInt<INT_SIZE>) -> BInt<INT_SIZE> {
+    let mut m = P;
     if a < BInt::ZERO {
-        // a = (a % P) + P;
-        a = a.rem_euclid(P);
+        a = ((a % P) + P) % P;
     }
-    let mut x = P - BInt::TWO;
-    let mut ans = BInt::ONE;
-    if x <= BInt::ZERO {
-        return BInt::ONE;
+    let mut y_prev = BInt::ZERO;
+    let mut y = BInt::ONE;
+    while a > BInt::ONE {
+        let q = m / a;
+
+        let y_before = y;
+        y = y_prev - q * y;
+        y_prev = y_before;
+
+        let a_before = a;
+        a = ((m % a) + a) % a;
+        m = a_before;
     }
-    loop {
-        if x == BInt::ONE {
-            return (ans * a) % P;
-        }
-        if x & BInt::ONE == BInt::ZERO {
-            a = (a * a) % P;
-            x >>= 1;
-            continue;
-        } else {
-            ans = (ans * a) % P;
-            x -= BInt::ONE;
-        }
-    }
+    return ((y % P) + P) % P;
 }
 
 fn get_double(point: &Point) -> Point {
     let slope = (point.x.pow(2) * BInt::THREE) * get_modinv(BInt::TWO * point.y);
-    let slope = slope.rem_euclid(P);
+    let slope = ((slope % P) + P) % P;
+
     let x = slope.pow(2) - (BInt::TWO * point.x);
-    let x = x.rem_euclid(P);
+    let x = ((x % P) + P) % P;
+
     let y = slope * (point.x - x) - point.y;
-    let y = y.rem_euclid(P);
+    let y = ((y % P) + P) % P;
     return Point { x, y };
 }
 
@@ -64,18 +92,18 @@ fn get_sum(point1: Point, point2: Point) -> Point {
     }
 
     let slope = (point1.y - point2.y) * get_modinv(point1.x - point2.x);
-    let slope = slope.rem_euclid(P);
+    let slope = ((slope % P) + P) % P;
 
     let x = slope.pow(2) - point1.x - point2.x;
-    let x = x.rem_euclid(P);
+    let x = ((x % P) + P) % P;
 
     let y = (slope * (point1.x - x)) - point1.y;
-    let y = y.rem_euclid(P);
+    let y = ((y % P) + P) % P;
 
     return Point { x, y };
 }
 
-fn get_product(mut k: BInt<16>) -> Point {
+fn get_product(mut k: BInt<INT_SIZE>) -> Point {
     if k.is_negative() {
         // modify k
         k = -k;
@@ -93,7 +121,7 @@ fn get_product(mut k: BInt<16>) -> Point {
 }
 
 pub fn priv_to_pubkey(k: BUint<4>) -> [u8; 33] {
-    let k: BInt<16> = k.as_();
+    let k: BInt<INT_SIZE> = k.as_();
     let point = get_product(k);
     let mut ret = [0; 33];
 
@@ -103,7 +131,7 @@ pub fn priv_to_pubkey(k: BUint<4>) -> [u8; 33] {
         ret[0] = 3;
     }
 
-    ret[1..33].copy_from_slice(&point.x.to_be_bytes()[96..]);
+    ret[1..33].copy_from_slice(&point.x.to_be_bytes()[80..]);
 
     return ret;
 }
@@ -147,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_product() {
-        let test_num1: BInt<16> = BInt::from(89);
+        let test_num1: BInt<INT_SIZE> = BInt::from(89);
         let correct_x =
             "95798783811477552110532139218095995588261607922943497599304995669953488256687";
         let correct_y =
@@ -159,7 +187,7 @@ mod tests {
         let product = get_product(test_num1);
         assert_eq!(product, correct);
 
-        let test_num2: BInt<16> = BInt::from(-89);
+        let test_num2: BInt<INT_SIZE> = BInt::from(-89);
         let correct_x =
             "59804711932513506784123989531696865543229948330373523204264618537577706349480";
         let correct_y =
@@ -171,7 +199,7 @@ mod tests {
         let product = get_product(test_num2);
         assert_eq!(product, correct);
 
-        let test_num3: BInt<16> = BInt::parse_str_radix(
+        let test_num3: BInt<INT_SIZE> = BInt::parse_str_radix(
             "55066263022277343669578718895168534326250603453777594175500187360389116729240",
             10,
         );
@@ -186,7 +214,7 @@ mod tests {
         let product = get_product(test_num3);
         assert_eq!(product, correct);
 
-        let test_num4: BInt<16> = BInt::parse_str_radix(
+        let test_num4: BInt<INT_SIZE> = BInt::parse_str_radix(
             "-55066263022277343669578718895168534326250603453777594175500187360389116729240",
             10,
         );
@@ -286,28 +314,28 @@ mod tests {
         let test_num = "-550";
         let correct_inv =
             "68843660328367992551832203814256265214580518155753571710732054491974888977516";
-        let num: BInt<16> = BInt::parse_str_radix(test_num, 10);
+        let num: BInt<INT_SIZE> = BInt::parse_str_radix(test_num, 10);
         let modinv = get_modinv(num);
         assert_eq!(modinv.to_string(), correct_inv);
 
         let g_xcoord = "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798";
         let correct_inv =
             "16048257703666452242803569546805946138055448571451565585555302070354637922038";
-        let num: BInt<16> = BInt::parse_str_radix(g_xcoord, 16);
+        let num: BInt<INT_SIZE> = BInt::parse_str_radix(g_xcoord, 16);
         let modinv = get_modinv(num);
         assert_eq!(modinv.to_string(), correct_inv);
 
         let test_num = "550";
         let correct_inv =
             "46948428908948202871738781194431642638689466509886992328725529515933945694147";
-        let num: BInt<16> = BInt::parse_str_radix(test_num, 10);
+        let num: BInt<INT_SIZE> = BInt::parse_str_radix(test_num, 10);
         let modinv = get_modinv(num);
         assert_eq!(modinv.to_string(), correct_inv);
 
         let test_num = "551";
         let correct_inv =
             "33833986147382772165508037361885214454403752325169021434396862114833615938544";
-        let num: BInt<16> = BInt::parse_str_radix(test_num, 10);
+        let num: BInt<INT_SIZE> = BInt::parse_str_radix(test_num, 10);
         let modinv = get_modinv(num);
         assert_eq!(modinv.to_string(), correct_inv);
 
@@ -315,7 +343,7 @@ mod tests {
             "-55066263022277343669578718895168534326250603453777594175500187360389116729240";
         let correct_inv =
             "99743831533649743180767415461881961715214536094188998453902281937554196749625";
-        let num: BInt<16> = BInt::parse_str_radix(g_x_neg, 10);
+        let num: BInt<INT_SIZE> = BInt::parse_str_radix(g_x_neg, 10);
         let modinv = get_modinv(num);
         assert_eq!(modinv.to_string(), correct_inv);
     }

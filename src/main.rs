@@ -6,7 +6,6 @@ mod random_bnum;
 use random_bnum::generate_random_start_checked;
 
 use bnum::BUint;
-use secp256k1::{PublicKey, SECP256K1, SecretKey};
 
 mod secp;
 
@@ -33,18 +32,19 @@ fn main() {
         logger.increase();
         search_key += BUint::ONE;
 
-        let alt_pub_key = secp::priv_to_pubkey(search_key);
+        let pubkey = secp::priv_to_pubkey(search_key);
 
-        let privkey = SecretKey::from_slice(&search_key.to_be_bytes()).unwrap();
-        let pubkey = PublicKey::from_secret_key(&SECP256K1, &privkey);
-        let pubkey_hash = hash(&pubkey.serialize()).to_byte_array();
+        // let privkey = SecretKey::from_slice(&search_key.to_be_bytes()).unwrap();
+        // let pubkey = PublicKey::from_secret_key(&SECP256K1, &privkey);
+        // let pubkey_hash = hash(&pubkey.serialize()).to_byte_array();
+        //
+        // assert_eq!(alt_pub_key, pubkey.serialize());
 
-        assert_eq!(alt_pub_key, pubkey.serialize());
-
+        let pubkey_hash = hash(&pubkey).to_byte_array();
         if pubkey_hash == target {
             log::error!("FOUND OTHER");
             log::error!("Seed HEX: {:x}", search_key);
-            log::error!("WIF key: {}", fmt_wif(&privkey));
+            log::error!("WIF key: {}", fmt_wif(&search_key.to_be_bytes()));
             return;
         }
     }
@@ -56,7 +56,7 @@ fn hash(data: &[u8]) -> hash160::Hash {
     return hash160::Hash::from_engine(engine);
 }
 
-pub fn fmt_wif(key: &SecretKey) -> String {
+pub fn fmt_wif(key: &[u8; 32]) -> String {
     let mut ret = [0; 34];
     ret[0] = 128;
 
