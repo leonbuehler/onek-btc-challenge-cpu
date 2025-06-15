@@ -8,6 +8,8 @@ use random_bnum::generate_random_start_checked;
 use bnum::BUint;
 use secp256k1::{PublicKey, SECP256K1, SecretKey};
 
+mod secp;
+
 // pub const CHALLENGE: u32 = 71;
 // pub const TARGET: &str = "1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU";
 // pub const TARGET_PKH: &str = "f6f5431d25bbf7b12e8add9af5e3475c44a0a5b8";
@@ -31,9 +33,13 @@ fn main() {
         logger.increase();
         search_key += BUint::ONE;
 
+        let alt_pub_key = secp::priv_to_pubkey(search_key);
+
         let privkey = SecretKey::from_slice(&search_key.to_be_bytes()).unwrap();
         let pubkey = PublicKey::from_secret_key(&SECP256K1, &privkey);
         let pubkey_hash = hash(&pubkey.serialize()).to_byte_array();
+
+        assert_eq!(alt_pub_key, pubkey.serialize());
 
         if pubkey_hash == target {
             log::error!("FOUND OTHER");
